@@ -45,5 +45,6 @@ Thumbs.db
 
 .cursor
 
-models/
-tools/
+# Note: We include tools/ and example models for users
+# Backtest results
+backtest_*.csv

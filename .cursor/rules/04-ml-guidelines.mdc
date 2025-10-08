@@ -1,0 +1,87 @@
+---
+description: Machine Learning model development and training guidelines
+---
+
+# ML Model Guidelines
+
+## Model Architecture
+
+File: [ml_model.py](mdc:ml_model.py)
+
+### Current Setup
+
+- **Algorithm**: Gradient Boosting Classifier (scikit-learn)
+- **Features**: 16 features (RSI, ADX, MACD, CMF, etc.)
+- **Training Data**: 1000 candles from Binance
+- **Confidence Blending**: 70% rules + 30% ML
+
+### Auto-Training
+
+The `auto_train()` method in MLSignalEnhancer:
+
+```python
+def auto_train(self, binance_client, limit=1000):
+    """
+    Automatically train model using Binance data
+    
+    Steps:
+    1. Fetch 1000 candles
+    2. Calculate 45+ indicators
+    3. Generate ~180-260 training samples
+    4. Train Gradient Boosting model
+    5. Save model
+    
+    Time: 30-60 seconds
+    """
+```
+
+### Model Naming Convention
+
+Models are saved as: `models/ml_{SYMBOL}_{TIMEFRAME}.pkl`
+
+Examples:
+- `ml_BTCUSDT_5m.pkl`
+- `ml_ETHUSDT_15m.pkl`
+- `ml_BNBUSDT_1h.pkl`
+
+### Adding New Features
+
+When adding features to the ML model:
+
+1. Extract in `extract_features()` method
+2. Normalize values (0-1 range preferred)
+3. Handle NaN values
+4. Update feature names list
+5. Retrain all models
+6. Verify accuracy doesn't degrade
+
+### Model Performance
+
+Target metrics:
+- **Train Accuracy**: 90-100%
+- **Test Accuracy**: 70-85%
+- **Training Time**: < 2 minutes
+
+If test accuracy < 65%, investigate:
+- Feature quality
+- Training data quantity
+- Market regime changes
+- Overfitting
+
+### Retraining
+
+Models should be retrained:
+- Weekly (recommended)
+- After major market regime changes
+- When test accuracy drops below 70%
+- When adding new features
+
+Delete model file and bot will auto-retrain on next run.
+
+## Future Enhancements
+
+Planned improvements (see README Future Roadmap):
+- LSTM/Transformer for time-series
+- Online learning (incremental updates)
+- Ensemble models (multiple algorithms)
+- Reinforcement learning

@@ -1,0 +1,76 @@
+---
+globs: *.py
+---
+
+# Python Code Style Guidelines
+
+## General Style
+
+- Follow PEP 8 conventions
+- Use 4 spaces for indentation (no tabs)
+- Maximum line length: 100 characters
+- Use descriptive variable names
+
+## Imports
+
+```python
+# Standard library imports first
+import os
+import sys
+from datetime import datetime
+
+# Third-party imports
+import pandas as pd
+import numpy as np
+
+# Local imports
+from config import Config
+from database import Database
+```
+
+## Functions and Classes
+
+- Use docstrings for all functions and classes
+- Type hints are encouraged but not required
+- Keep functions focused (single responsibility)
+
+```python
+def calculate_position_size(balance: float, risk_pct: float) -> float:
+    """
+    Calculate position size based on available balance and risk percentage.
+    
+    Args:
+        balance: Available balance in quote asset
+        risk_pct: Risk percentage (0-100)
+    
+    Returns:
+        Position size in quote asset
+    """
+    return balance * (risk_pct / 100)
+```
+
+## Error Handling
+
+- Always use try-except for external API calls
+- Log errors to database
+- Provide meaningful error messages
+- Never suppress errors silently
+
+```python
+try:
+    df = self.binance.get_klines(symbol, timeframe)
+except Exception as e:
+    self.db.error(f"Failed to fetch klines: {e}")
+    return None
+```
+
+## Constants
+
+- Use UPPER_CASE for constants
+- Define constants at module level
+
+```python
+MIN_CONFIDENCE = 55
+DEFAULT_LEVERAGE = 3
+STOP_LOSS_PCT = 2.0
+```

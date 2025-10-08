@@ -1,0 +1,134 @@
+---
+globs: *.md,*.py
+---
+
+# Documentation Standards
+
+## Code Documentation
+
+### Module Docstrings
+
+Every Python file should start with:
+
+```python
+"""
+Module description.
+
+This module handles [specific functionality].
+Key features:
+- Feature 1
+- Feature 2
+"""
+```
+
+### Function Docstrings
+
+Use Google-style docstrings:
+
+```python
+def function_name(param1: type, param2: type) -> return_type:
+    """
+    Brief description.
+    
+    Longer description if needed. Explain what the function does,
+    not how it does it (code shows that).
+    
+    Args:
+        param1: Description of param1
+        param2: Description of param2
+    
+    Returns:
+        Description of return value
+    
+    Raises:
+        ExceptionType: When this exception is raised
+    
+    Example:
+        >>> result = function_name(1, 2)
+        >>> print(result)
+        3
+    """
+```
+
+### Inline Comments
+
+- Explain **why**, not **what**
+- Use for complex logic
+- Keep comments up-to-date
+
+```python
+# Good: Explains reasoning
+# Use 70-30 split to maintain explainability while adding ML power
+final_confidence = (rule_conf * 0.7) + (ml_prob * 0.3)
+
+# Bad: States the obvious
+# Multiply rule confidence by 0.7
+final_confidence = rule_conf * 0.7
+```
+
+## README.md
+
+File: [README.md](mdc:README.md)
+
+Keep updated with:
+- Quick start instructions
+- Feature list
+- Configuration options
+- Usage examples
+- FAQ
+- Future roadmap
+
+## Configuration Documentation
+
+File: [env.example](mdc:env.example)
+
+- Comment every parameter
+- Show example values
+- Explain ranges and recommendations
+- Include warnings for dangerous settings
+
+## Database Schema
+
+Document in [database.py](mdc:database.py):
+- Table structure
+- Column types
+- Relationships
+- Indexes
+
+## API Integration
+
+Document in [binance_futures.py](mdc:binance_futures.py):
+- All API endpoints used
+- Rate limits
+- Error handling
+- Response formats
+
+## Change Log
+
+When making significant changes:
+1. Update version number
+2. Document in git commit
+3. Update README if user-facing
+4. Note breaking changes clearly
+
+## User Guides
+
+For complex features, provide examples:
+
+```python
+# Example: Training a model manually
+"""
+To train a model for a new symbol:
+
+1. Edit .env:
+   TRADING_PAIR=SOLUSDT
+   TIMEFRAME=15m
+
+2. Run:
+   python tools/train_ml_model.py
+
+3. Select real Binance data
+4. Wait for training to complete
+5. Bot will use model on next run
+"""
+```

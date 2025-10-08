@@ -43,7 +43,9 @@ Thumbs.db
 *.bak
 *~
 
-.cursor
+# Cursor workspace settings (but keep rules)
+.cursor/*
+!.cursor/rules/
 
 # Note: We include tools/ and example models for users
 # Backtest results

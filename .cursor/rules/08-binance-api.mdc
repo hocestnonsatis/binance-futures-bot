@@ -1,0 +1,189 @@
+---
+description: Binance API integration guidelines and best practices
+---
+
+# Binance API Guidelines
+
+File: [binance_futures.py](mdc:binance_futures.py)
+
+## API Key Security
+
+**CRITICAL**: Never commit API keys to git
+
+```bash
+# ✅ Correct: Use environment variables
+BINANCE_API_KEY=your_key_here
+
+# ❌ Wrong: Hardcode in files
+api_key = "abc123..."  # NEVER DO THIS
+```
+
+### API Permissions
+
+For trading, enable:
+- ✅ Enable Futures
+- ✅ Enable Reading
+- ❌ Disable Withdrawals (not needed, security risk)
+
+### IP Whitelist
+
+For production:
+- Enable IP whitelist on Binance
+- Only allow your server IP
+- Adds extra security layer
+
+## Rate Limits
+
+Binance has strict rate limits:
+- **Orders**: 1200 per minute
+- **Weight**: 2400 per minute
+- **WebSocket**: 10 connections max
+
+Our bot uses REST API with polling:
+- Safe for rate limits
+- Simpler than WebSocket
+- More reliable
+
+### Handling Rate Limits
+
+```python
+try:
+    data = self.client.futures_klines(...)
+except BinanceAPIException as e:
+    if e.code == -1003:  # Rate limit
+        self.db.warning("Rate limit hit, backing off...")
+        time.sleep(60)  # Wait 1 minute
+        return None
+```
+
+## Error Handling
+
+### Common Errors
+
+```python
+# -1003: Rate limit exceeded
+# -2010: Insufficient balance
+# -2019: Margin insufficient
+# -4001: Invalid price
+# -4003: Position size too small
+```
+
+### Retry Logic
+
+For transient errors:
+```python
+max_retries = 3
+for attempt in range(max_retries):
+    try:
+        result = api_call()
+        break
+    except Exception as e:
+        if attempt == max_retries - 1:
+            raise
+        time.sleep(2 ** attempt)  # Exponential backoff
+```
+
+## Market Data
+
+### Klines (Candlesticks)
+
+```python
+df = self.get_klines(
+    symbol='BTCUSDT',
+    interval='5m',
+    limit=1000  # Max 1500
+)
+```
+
+Returns DataFrame with:
+- timestamp, open, high, low, close, volume
+
+### Ticker Price
+
+```python
+price = self.get_ticker_price('BTCUSDT')
+```
+
+Faster than klines for just current price.
+
+## Order Execution
+
+### Market Orders
+
+```python
+order = self.place_market_order(
+    symbol='BTCUSDT',
+    side='BUY',  # or 'SELL'
+    quantity=0.001
+)
+```
+
+### Stop Loss / Take Profit
+
+```python
+# Set stop loss
+self.place_stop_loss(
+    symbol='BTCUSDT',
+    side='SELL',
+    quantity=0.001,
+    stop_price=42000
+)
+```
+
+## Position Management
+
+### Get Current Position
+
+```python
+position = self.get_position('BTCUSDT')
+# Returns: side, quantity, entry_price, unrealized_pnl
+```
+
+### Close Position
+
+```python
+self.close_position('BTCUSDT')
+# Market order to close entire position
+```
+
+## Testnet vs Live
+
+### Testnet (Default)
+- URL: `https://testnet.binancefuture.com`
+- Free fake money
+- Safe for testing
+- No real risk
+
+### Live Trading
+- URL: `https://fapi.binance.com`
+- Real money
+- Real risk
+- Set `TESTNET=false` in .env
+
+**Always test on testnet first!**
+
+## Funding Rates
+
+Check funding rates:
+```python
+funding = self.get_funding_rate('BTCUSDT')
+# Returns: rate, next_funding_time, mark_price
+```
+
+Typical rate: 0.01% per 8 hours
+- Longs pay shorts if rate positive
+- Shorts pay longs if rate negative
+- Affects holding costs
+
+## Best Practices
+
+1. **Always use try-except** for API calls
+2. **Log all errors** to database
+3. **Implement retry logic** for transient errors
+4. **Respect rate limits** (don't spam)
+5. **Validate inputs** before API calls
+6. **Handle all error codes** appropriately
+7. **Test on testnet first** always
+8. **Monitor API status** (Binance status page)
+9. **Keep API keys secure** (environment variables only)
+10. **Use isolated margin** (safer than cross)

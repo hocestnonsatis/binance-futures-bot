@@ -1,0 +1,139 @@
+---
+description: Testing and backtesting guidelines
+---
+
+# Testing Guidelines
+
+## Backtesting
+
+File: [tools/backtest.py](mdc:tools/backtest.py)
+
+### Running Backtests
+
+```bash
+python tools/backtest.py
+
+# Inputs:
+# - Symbol: BTCUSDT
+# - Timeframe: 5m
+# - Days: 7
+# - Strategy: 2 (Hybrid)
+```
+
+### Interpreting Results
+
+**Good Performance:**
+- Win Rate: 55-65%
+- Profit Factor: > 1.5
+- Sharpe Ratio: > 1.0
+- Max Drawdown: < 15%
+
+**Acceptable:**
+- Win Rate: 50-55%
+- Profit Factor: 1.2-1.5
+- Sharpe Ratio: 0.5-1.0
+- Max Drawdown: 15-25%
+
+**Poor (needs improvement):**
+- Win Rate: < 50%
+- Profit Factor: < 1.2
+- Sharpe Ratio: < 0.5
+- Max Drawdown: > 25%
+
+### Backtest Validation
+
+Before going live:
+1. Backtest at least 30 days
+2. Test multiple timeframes
+3. Compare Rules vs Hybrid
+4. Verify on different symbols
+5. Check performance in different market conditions
+
+## Unit Testing
+
+### Testing Indicators
+
+```bash
+python tools/test_indicators.py
+```
+
+Verifies:
+- All 45+ indicators calculate correctly
+- No NaN values in recent data
+- pandas_ta integration works
+
+### Testing Auto-Training
+
+```bash
+python tools/test_auto_train.py
+```
+
+Verifies:
+- Model trains successfully
+- Accuracy meets targets
+- Model saves correctly
+- Subsequent loads work
+
+### Testing Strategies
+
+```bash
+# Test Experta rules
+python tools/test_expert_strategy.py
+
+# Compare Hybrid vs Rules
+python tools/test_hybrid_strategy.py
+```
+
+## Live Testing Protocol
+
+### Phase 1: Testnet (2+ weeks)
+1. Run on testnet with real-time data
+2. Monitor all signals
+3. Track P&L
+4. Verify stop losses trigger
+5. Check for any errors
+
+### Phase 2: Small Live (1+ week)
+1. Start with minimum position size
+2. Use 1x leverage
+3. Monitor closely
+4. Verify execution matches expectations
+
+### Phase 3: Gradual Scale-Up
+1. Increase position size slowly
+2. Increase leverage cautiously
+3. Continue monitoring
+4. Adjust parameters based on results
+
+## Monitoring Tools
+
+```bash
+# Check current position
+python tools/check_position.py
+
+# List trained models
+python tools/list_models.py
+
+# Check funding rates
+python tools/test_funding_rate.py
+```
+
+## Common Issues
+
+### Low Signal Generation
+- Check MIN_CONFIDENCE setting
+- Review rule triggers
+- Ensure indicators calculating correctly
+- Try different timeframe
+
+### Poor Backtest Results
+- Adjust risk parameters
+- Review rule strengths
+- Check indicator quality
+- Retrain ML model with more data
+
+### Model Training Failures
+- Ensure 1000+ candles available
+- Check indicator calculation
+- Verify Binance API working
+- Try different symbol/timeframe

@@ -1,0 +1,77 @@
+---
+description: Guidelines for developing trading strategies and Experta rules
+---
+
+# Strategy Development Guidelines
+
+## Experta Rules
+
+When adding new trading rules to [strategy.py](mdc:strategy.py):
+
+### Rule Structure
+
+```python
+@Rule(
+    MarketCondition(regime='STRONG_TREND'),
+    Indicator(name='adx', value=P(lambda x: x > 25)),
+    Indicator(name='rsi', value=P(lambda x: 30 < x < 70)),
+    salience=100  # Priority: higher = executed first
+)
+def my_rule_name(self):
+    """Clear description of what this rule detects"""
+    self.add_signal('BUY', strength=40, reason='Clear explanation')
+    self.add_rule_trigger('My Rule Name')
+```
+
+### Best Practices
+
+1. **Salience Priority**:
+   - 100-150: Market regime detection
+   - 80-99: Strong trend signals
+   - 60-79: Breakout signals
+   - 40-59: Mean reversion signals
+   - 20-39: Volume confirmation
+   - 1-19: Risk filters
+
+2. **Signal Strength**:
+   - Use strength values 20-50
+   - Higher strength = stronger signal
+   - Signals accumulate (max 100)
+
+3. **Predicates**:
+   - Use `P(lambda x: x > value)` for numeric comparisons
+   - Ensure values are numeric (float/int)
+   - Handle NaN values appropriately
+
+4. **Rule Categories**:
+   - Market Regime Detection
+   - Trend Following
+   - Mean Reversion
+   - Breakout Detection
+   - Volume Confirmation
+   - Risk Filters
+
+### Testing Rules
+
+After adding a rule:
+1. Test with `python tools/test_expert_strategy.py`
+2. Backtest with `python tools/backtest.py`
+3. Verify signal explanations are clear
+
+## Indicators
+
+When adding new indicators to [indicators.py](mdc:indicators.py):
+
+1. Use pandas_ta when possible
+2. Add try-except for robustness
+3. Handle NaN values
+4. Document calculation method
+5. Add to `add_all_indicators()` method
+
+## Hybrid Strategy
+
+The final signal combines:
+- 70% Experta rules (explainable)
+- 30% ML model (pattern recognition)
+
+Never modify this ratio without thorough backtesting.

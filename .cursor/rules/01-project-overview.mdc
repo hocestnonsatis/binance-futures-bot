@@ -1,0 +1,35 @@
+---
+alwaysApply: true
+---
+
+# Binance Futures Trading Bot - Project Overview
+
+## Architecture
+
+This is a professional Binance Futures trading bot with **Hybrid AI** (Experta + Machine Learning).
+
+### Core Components
+
+- **[main.py](mdc:main.py)**: Main bot loop, position management, auto-training integration
+- **[strategy.py](mdc:strategy.py)**: Experta expert system with 40+ trading rules
+- **[ml_model.py](mdc:ml_model.py)**: ML enhancement, auto-training, hybrid strategy
+- **[indicators.py](mdc:indicators.py)**: 45+ technical indicators using pandas_ta
+- **[binance_futures.py](mdc:binance_futures.py)**: Binance API wrapper
+- **[config.py](mdc:config.py)**: Configuration management
+- **[database.py](mdc:database.py)**: SQLite database for trades and logs
+- **[risk_manager.py](mdc:risk_manager.py)**: Position sizing and risk controls
+
+### Key Features
+
+1. **Hybrid AI Strategy**: 70% Experta rules + 30% ML confidence
+2. **Auto-Training**: Automatically trains ML models in 30-60 seconds
+3. **Multi-Symbol/Timeframe**: Each symbol-timeframe gets its own model
+4. **Backtesting**: Test strategies on historical data
+5. **Risk Management**: Stop-loss, take-profit, trailing stops, daily limits
+
+## Design Principles
+
+- **Production-Ready**: Clean, modular, well-documented code
+- **Explainability**: Every decision is traceable (Experta rules)
+- **User-Friendly**: Auto-training eliminates manual setup
+- **Safety First**: Multiple risk controls and testnet support

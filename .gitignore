@@ -45,8 +45,11 @@ Thumbs.db
 
 # Cursor workspace settings (but keep rules)
 .cursor/*
-!.cursor/rules/
 
 # Note: We include tools/ and example models for users
 # Backtest results
 backtest_*.csv
+config_cache.json
+
+data/cached/
+models/

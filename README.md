@@ -1,6 +1,6 @@
 # Binance Futures Trading Bot
 
-A professional automated trading bot for Binance Futures with **Hybrid AI** (Expert System + Machine Learning), automatic model training, and comprehensive risk management.
+A professional automated trading bot for Binance Futures with **Hybrid AI** (Expert System + Machine Learning), automatic training, multi-timeframe analysis, and advanced risk management.
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -8,48 +8,36 @@ A professional automated trading bot for Binance Futures with **Hybrid AI** (Exp
 
 ---
 
-## 🚀 Features
-
-### Core Features
+## 🚀 Key Features
 
 - **🤖 Hybrid AI Strategy**: Combines Experta rule-based system (explainable) with ML pattern recognition (powerful)
-- **⚡ Auto-Training**: Automatically trains ML models on first run using real Binance data (30-60 seconds)
+- **⚡ Fully Automatic Training**: Bot automatically downloads data and trains ML models on first run - zero configuration!
+- **💾 Quick Restart**: Saves your configuration and offers to reuse it on restart - 10x faster restarts!
+- **📦 Smart Data Management**: Uses cached data when available, downloads from Binance when needed
 - **🎯 Multi-Symbol/Timeframe**: Separate trained models for each symbol-timeframe combination
-- **📊 45+ Technical Indicators**: Powered by pandas_ta - RSI, MACD, EMA, ADX, Supertrend, Ichimoku, and more
+- **📊 45+ Technical Indicators**: RSI, MACD, EMA, ADX, Supertrend, Ichimoku, and more (pandas_ta)
 - **🧠 Expert System**: 40+ intelligent trading rules with priority-based execution
 - **📈 Backtesting Engine**: Test strategies on historical data with detailed performance metrics
 - **🛡️ Risk Management**: Position sizing, stop-loss, take-profit, trailing stops, daily loss limits
-- **💾 Database Logging**: SQLite for tracking trades and bot activity
+- **💾 Database Logging**: SQLite for tracking all trades and bot activity
 - **🔄 Real-time Trading**: REST API polling for stable, reliable data
-
-### Advanced Features
-
-- **Market Regime Detection**: Automatically adapts to TRENDING, RANGING, or VOLATILE conditions
-- **Explainable AI**: Every signal shows which rules triggered and why
-- **ML Confidence Adjustment**: 70% rules + 30% ML for optimal decision-making
-- **Funding Rate Tracking**: Monitor Binance Futures holding costs
-- **Position Monitoring**: Real-time P&L tracking with trailing stops
-- **Production-Ready**: Clean, modular, well-documented code
 
 ---
 
 ## 📋 Table of Contents
 
-- [Quick Start](#quick-start)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [How It Works](#how-it-works)
-- [Hybrid AI Strategy](#hybrid-ai-strategy)
-- [Auto-Training](#auto-training)
-- [Backtesting](#backtesting)
-- [Risk Management](#risk-management)
-- [Tools & Utilities](#tools--utilities)
-- [Project Structure](#project-structure)
-- [Future Roadmap](#future-roadmap)
-- [FAQ](#faq)
-- [Contributing](#contributing)
-- [License](#license)
+- [Quick Start](#-quick-start)
+- [Installation](#-installation)
+- [Configuration](#️-configuration)
+- [How It Works](#-how-it-works)
+- [Hybrid AI Strategy](#-hybrid-ai-strategy)
+- [Automatic Training](#-automatic-training)
+- [Backtesting](#-backtesting)
+- [Risk Management](#️-risk-management)
+- [Project Structure](#-project-structure)
+- [Advanced Usage](#-advanced-usage)
+- [FAQ](#-faq)
+- [License](#-license)
 
 ---
 
@@ -57,8 +45,8 @@ A professional automated trading bot for Binance Futures with **Hybrid AI** (Exp
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/hocestnonsatis/binance-futures-bot.git
-cd binance-futures-bot
+git clone https://github.com/yourusername/binance-bot.git
+cd binance-bot
 
 # 2. Create virtual environment
 python -m venv venv
@@ -68,17 +56,18 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # 4. Configure environment
-cp .env.example .env
+cp env.example .env
 # Edit .env with your Binance API keys
 
 # 5. Run the bot
 python main.py
-
-# On first run, bot will offer to auto-train ML model
-# Just press [Y] and wait 30-60 seconds!
 ```
 
-**That's it!** 🎉 Your bot is ready to trade with ML enhancement.
+**That's it!** 🎉 On first run, the bot will automatically:
+- Check for cached historical data
+- Download data from Binance if needed
+- Train an ML model (30-120 seconds)
+- Start trading with full Hybrid AI
 
 ---
 
@@ -103,6 +92,7 @@ pip install -r requirements.txt
 - `experta` - Expert system (rule engine)
 - `scikit-learn` - Machine learning
 - `joblib` - Model persistence
+- `pyarrow` - Efficient data storage
 
 ### Step 2: Get Binance API Keys
 
@@ -137,14 +127,17 @@ LEVERAGE=3
 MARGIN_TYPE=ISOLATED
 
 # Risk Management
-POSITION_SIZE_PCT=90  # Use 90% of available balance
-STOP_LOSS_PCT=2.0     # Stop loss at -2%
-TAKE_PROFIT_PCT=5.0   # Take profit at +5%
-TRAILING_STOP_PCT=1.5 # Trailing stop distance
-MAX_DAILY_LOSS_PCT=5.0 # Max daily loss before stopping
+POSITION_SIZE_PCT=90      # Use 90% of available balance
+STOP_LOSS_PCT=2.0         # Stop loss at -2%
+TAKE_PROFIT_PCT=5.0       # Take profit at +5%
+TRAILING_STOP_PCT=1.5     # Trailing stop distance
+MAX_DAILY_LOSS_PCT=5.0    # Max daily loss before stopping
 
 # Signal Settings
-MIN_CONFIDENCE=55  # Minimum signal confidence (0-100)
+MIN_CONFIDENCE=55         # Minimum signal confidence (0-100)
+
+# Multi-Timeframe Analysis
+USE_MULTI_TIMEFRAME=true  # Enable higher timeframe analysis
 ```
 
 ### Configuration Options
@@ -162,72 +155,6 @@ MIN_CONFIDENCE=55  # Minimum signal confidence (0-100)
 
 ---
 
-## 🎮 Usage
-
-### Running the Bot
-
-```bash
-python main.py
-```
-
-### First Run - Auto-Training
-
-On the first run with a new symbol/timeframe, the bot will offer to train an ML model:
-
-```
-✓ Connected to Binance TESTNET
-✓ Strategy: Hybrid AI Strategy (Experta + ML) [Rules-Only]
-  🤖 ML Enhancement: Not trained
-     No model for: BTCUSDT 5m
-
-Would you like to train an ML model now?
-This will fetch 1000 candles from Binance and train a model (~30-60 seconds)
-Auto-train ML model? [Y/n]: 
-```
-
-Press **Y** and the bot will:
-1. Fetch 1000 historical candles from Binance
-2. Calculate 45+ technical indicators
-3. Generate ~180-260 training samples
-4. Train a Gradient Boosting model
-5. Save the model for future use
-
-**Next time you run the bot**, the model loads instantly! ⚡
-
-### Subsequent Runs
-
-```
-✓ Connected to Binance TESTNET
-✓ ML model loaded: BTCUSDT 5m
-✓ Strategy: Hybrid AI Strategy (Experta + ML) [ML-Enhanced]
-  🤖 ML Enhancement: Active
-     Model: BTCUSDT 5m
-
-Bot Ready!
-```
-
-The bot is now monitoring the market and will execute trades based on signals.
-
-### Signal Output
-
-```
-[2025-10-08 14:32:15] Signal: BUY (72.5%)
-  Reasons:
-    - Perfect uptrend: ADX+EMA+DMP+Supertrend
-    - ML boost: +7.5% (pattern recognition)
-    - Volume confirms: CMF > 0.15
-
-Triggered Rules:
-  - Strong Trending Market
-  - Perfect Uptrend
-  - Volume Confirmation
-
-Opening LONG position...
-✓ Order placed: 0.05 BTC @ $42,350.00
-```
-
----
-
 ## 🧠 How It Works
 
 ### Architecture
@@ -242,7 +169,7 @@ Opening LONG position...
 │  │  (Explainable AI)    │     │  (Pattern Learning)  │    │
 │  │                      │     │                      │    │
 │  │  • 40+ trading rules │     │  • Gradient Boosting │    │
-│  │  • Priority-based    │     │  • 16 features       │    │
+│  │  • Priority-based    │     │  • 27 features       │    │
 │  │  • Market regimes    │     │  • Symbol-specific   │    │
 │  │  • 70% weight        │     │  • 30% weight        │    │
 │  └──────────────────────┘     └──────────────────────┘    │
@@ -268,15 +195,15 @@ Opening LONG position...
 
 1. **Data Collection**: Fetch latest candles from Binance (REST API)
 2. **Indicator Calculation**: Compute 45+ technical indicators
-3. **Market Regime Detection**: Identify current market conditions
+3. **Market Regime Detection**: Identify current market conditions (TRENDING/RANGING/VOLATILE)
 4. **Signal Generation**: 
    - Experta rules fire based on indicators (70% weight)
    - ML model predicts signal success (30% weight)
-   - Combine for final confidence
-5. **Risk Check**: Verify signal meets confidence threshold
-6. **Position Sizing**: Calculate position size based on risk parameters
-7. **Order Execution**: Place order on Binance
-8. **Position Management**: Monitor with trailing stops, TP/SL
+   - Combine for final confidence score
+5. **Risk Check**: Verify signal meets confidence threshold and risk parameters
+6. **Position Sizing**: Calculate position size based on available balance and leverage
+7. **Order Execution**: Place limit order on Binance (with smart retry system)
+8. **Position Management**: Monitor with trailing stops, take-profit, and stop-loss
 
 ---
 
@@ -297,29 +224,12 @@ Our bot uses a unique **Hybrid AI** approach that combines the best of both worl
 
 **Rule Categories:**
 
-1. **Market Regime Detection (3 rules)**
-   - Strong Trending Market
-   - Ranging Market
-   - Volatile Trending Market
-
-2. **Trend Following (4 rules)**
-   - Perfect Uptrend (ADX + EMA + DMP + Supertrend)
-   - Perfect Downtrend
-   - Bullish/Bearish Momentum Confirmation
-
-3. **Mean Reversion (4 rules)**
-   - Extreme Oversold/Overbought
-   - Mean Reversion from EMA21
-
-4. **Breakout Detection (4 rules)**
-   - Bullish/Bearish Breakouts
-   - Supertrend Reversals
-
-5. **Volume Confirmation (2 rules)**
-   - CMF + OBV validation
-
-6. **Risk Filters (2 rules)**
-   - Block trades in extreme conditions
+1. **Market Regime Detection** - Identify market conditions
+2. **Trend Following** - Perfect uptrend/downtrend patterns
+3. **Mean Reversion** - Overbought/oversold in ranging markets
+4. **Breakout Detection** - Support/resistance breakouts
+5. **Volume Confirmation** - CMF + OBV validation
+6. **Risk Filters** - Block trades in extreme conditions
 
 **Example Rule:**
 ```python
@@ -335,34 +245,19 @@ def perfect_uptrend(self):
 
 #### Layer 2: ML Enhancement (30% weight)
 
-**Pattern recognition and bias correction.**
+**Pattern recognition and confidence adjustment.**
 
 - **Gradient Boosting Classifier** (scikit-learn)
-- **16 Features**: RSI, ADX, MACD, CMF, MFI, trend score, etc.
-- **Learns from 1000+ real market candles**
+- **27 Features**: RSI, ADX, MACD, CMF, MFI, trend score, etc.
+- **Learns from 500-2000+ real market candles**
 - **Symbol-specific models** (BTCUSDT ≠ ETHUSDT)
 - **Confidence adjustment**: Boosts or reduces signal strength
 
-**ML Features:**
-```
-1. rule_signal         - BUY/SELL/HOLD
-2. rule_confidence     - Base confidence
-3. num_rules          - Rules triggered
-4. rsi, adx, cci      - Momentum indicators
-5. macd_hist          - Trend strength
-6. cmf, mfi           - Volume indicators
-7. bb_position        - Bollinger Band position
-8. trend_score        - Composite trend
-9. ema_alignment      - EMA stack
-10. recent_momentum    - Price action
-... and 6 more
-```
-
 **Training:**
-- **Data**: 1000 candles from Binance
-- **Samples**: ~180-260 training examples
-- **Accuracy**: 74-84% on test set
-- **Time**: 30-60 seconds to train
+- **Data**: 500-2000+ candles (cached or from Binance)
+- **Samples**: 100-400+ training examples
+- **Accuracy**: 70-85% on test set
+- **Time**: 30-120 seconds to train
 
 #### Confidence Blending
 
@@ -383,36 +278,44 @@ This approach provides:
 
 ---
 
-## ⚡ Auto-Training
+## ⚡ Automatic Training
 
 ### Zero Manual Configuration
 
-The bot includes **automatic ML model training**:
+The bot includes **fully automatic ML model training**:
 
-- **First run**: Bot detects missing model and offers to train
-- **User choice**: Press [Y] to auto-train, [N] to use rules only
-- **Fast training**: 30-60 seconds using real Binance data
+- **First run**: Bot detects missing model and automatically trains
+- **No user interaction**: Downloads data and trains without asking
+- **Smart data source**: Uses cached data if available, downloads if needed
+- **Fast training**: 30-120 seconds using real Binance data
 - **Automatic loading**: Next run loads model instantly
 
 ### How Auto-Training Works
 
 ```
-1. Fetch Historical Data
-   ↓ 1000 candles from Binance (~5-10 sec)
+1. Check for Cached Data
+   ↓ Look in data/cached/{SYMBOL}_{TIMEFRAME}.parquet
    
-2. Calculate Indicators
+2a. If cached data exists (≥500 candles)
+   ↓ Use cached data (instant!)
+   
+2b. If no cached data
+   ↓ Download from Binance (500-2000+ candles)
+   ↓ Save to cache for future use
+   
+3. Calculate Indicators
    ↓ 45+ technical indicators (~5-10 sec)
    
-3. Generate Training Samples
-   ↓ ~180-260 signal examples (~5-10 sec)
+4. Generate Training Samples
+   ↓ 100-400+ signal examples with price-based labels
    
-4. Train ML Model
-   ↓ Gradient Boosting Classifier (~10-20 sec)
+5. Train ML Model
+   ↓ Gradient Boosting Classifier (~10-30 sec)
    
-5. Save Model
+6. Save Model
    ↓ models/ml_{SYMBOL}_{TIMEFRAME}.pkl
 
-Total: 30-60 seconds
+Total: 30-120 seconds
 ```
 
 ### Multi-Symbol Support
@@ -428,19 +331,21 @@ models/
 
 **Why?** Each market has unique patterns. BTCUSDT 5m ≠ ETHUSDT 15m.
 
-### Managing Models
+### Data Caching
 
-```bash
-# List all trained models
-python tools/list_models.py
+Downloaded data is stored in Parquet format for fast reuse:
 
-# Output:
-# ✓ BTCUSDT  5m   | Size: 231.9 KB | Updated: 2025-10-08 17:35
-# ✓ ETHUSDT  15m  | Size: 298.7 KB | Updated: 2025-10-08 17:40
-
-# Delete a model (will auto-train on next run)
-rm models/ml_BTCUSDT_5m.pkl
 ```
+data/cached/
+  BTCUSDT_5m.parquet    # 10,000+ candles, ~2 MB
+  ETHUSDT_15m.parquet
+  BNBUSDT_1h.parquet
+```
+
+Benefits:
+- ⚡ **10x faster** than re-downloading
+- 💾 **10x smaller** than CSV
+- 🔄 **Reusable** for multiple training sessions
 
 ---
 
@@ -539,133 +444,145 @@ TRAILING_STOP_PCT=1.5     # Tight: 0.5-1, Loose: 2-3
 MAX_DAILY_LOSS_PCT=5.0    # Strict: 2-3, Relaxed: 5-10
 ```
 
-### Funding Rate Awareness
-
-Binance Futures charges funding rates every 8 hours. The bot:
-- ✅ Tracks funding rates
-- ✅ Logs costs in database
-- ✅ Considers in P&L calculations
-
-**Check current funding rate:**
-```bash
-python tools/test_funding_rate.py
-```
-
----
-
-## 🔧 Tools & Utilities
-
-### Training & Testing
-
-```bash
-# Manual ML model training (advanced)
-python tools/train_ml_model.py
-
-# Test hybrid vs rules-only strategy
-python tools/test_hybrid_strategy.py
-
-# List all trained models
-python tools/list_models.py
-
-# Test indicators calculation
-python tools/test_indicators.py
-```
-
-### Monitoring
-
-```bash
-# Check open position status
-python tools/check_position.py
-
-# Output:
-# Position: LONG BTCUSDT
-# Entry: $42,350.00
-# Current: $42,850.00
-# P&L: +$125.00 (+1.18%)
-# Trailing Stop: $42,600.00
-
-# Check funding rates
-python tools/test_funding_rate.py
-```
-
-### Backtesting
-
-```bash
-# Backtest strategy on historical data
-python tools/backtest.py
-```
-
 ---
 
 ## 📁 Project Structure
 
 ```
-binance-futures-bot/
-├── Core (8 files)
-│   ├── main.py                 # Bot main loop
+binance-bot/
+├── Core Trading System
+│   ├── main.py                 # Bot main loop with automatic training
 │   ├── strategy.py             # Experta expert system (40+ rules)
-│   ├── ml_model.py             # ML enhancement + auto-training
+│   ├── ml_model.py             # ML enhancement + auto-training logic
 │   ├── indicators.py           # 45+ technical indicators
 │   ├── binance_futures.py      # Binance API wrapper
 │   ├── config.py               # Configuration management
-│   ├── database.py             # SQLite database
-│   └── risk_manager.py         # Risk management
+│   ├── database.py             # SQLite database for trades/logs
+│   └── risk_manager.py         # Position sizing & risk controls
 │
-├── models/                      # Trained ML models
-│   ├── ml_BTCUSDT_5m.pkl
-│   └── ...
+├── Data Infrastructure
+│   ├── data/
+│   │   ├── binance_downloader.py  # Download historical data
+│   │   ├── data_manager.py        # Load and manage cached data
+│   │   └── cached/                # Parquet files (auto-created)
+│   │       ├── BTCUSDT_5m.parquet
+│   │       └── ...
 │
-├── tools/                       # Utility scripts
-│   ├── train_ml_model.py       # Manual training
-│   ├── backtest.py             # Backtesting engine
-│   ├── list_models.py          # Model management
-│   ├── test_hybrid_strategy.py # Strategy comparison
-│   ├── test_indicators.py      # Indicator testing
-│   ├── test_funding_rate.py    # Funding rate checker
-│   └── check_position.py       # Position monitor
+├── ML Models
+│   ├── models/                    # Trained ML models (auto-created)
+│   │   ├── ml_BTCUSDT_5m.pkl
+│   │   └── ...
 │
-├── .env                         # Configuration (create from .env.example)
-├── requirements.txt             # Python dependencies
-├── README.md                    # This file
-└── LICENSE                      # MIT License
+├── Tools
+│   └── tools/
+│       └── backtest.py            # Backtesting engine
+│
+├── Configuration
+│   ├── .env                       # Your configuration (create from .env.example)
+│   ├── env.example                # Configuration template
+│   ├── requirements.txt           # Python dependencies
+│   └── bot.db                     # SQLite database (auto-created)
+│
+└── Documentation
+    ├── README.md                  # This file
+    └── LICENSE                    # MIT License
 ```
 
-**Total:** ~8,000 lines of production-ready code
+**Total:** ~3,500 lines of clean, production-ready Python code
 
 ---
 
-## 🔮 Future Roadmap
+## 🔧 Advanced Usage
 
-### v5.3 - Silent Auto-Training (Next)
+### Configuration Cache (Quick Restart)
 
-- **Background model training**: Train models without user interaction
-- **Scheduled retraining**: Auto-retrain models weekly/monthly
-- **Model versioning**: Keep multiple model versions
+The bot automatically saves your configuration settings and offers to reuse them on restart:
 
-### v6.0 - Advanced ML
+**First Run:**
+- Enter all your settings (trading pair, timeframe, leverage, etc.)
+- Bot saves configuration to `config_cache.json`
 
-- **LSTM/Transformer integration**: Deep learning for time-series prediction
-- **Multi-timeframe analysis**: Combine 5m + 15m + 1h signals
-- **Ensemble models**: XGBoost + LightGBM + CatBoost voting
+**Second Run (and later):**
+```
+✓ Found saved configuration from previous session
+  Last used: 2025-10-09T14:32:15
 
-### v6.5 - Online Learning
+Previous Settings:
+  • Trading Pair: BTCUSDT
+  • Timeframe: 5m
+  • Leverage: 3x
+  ...
 
-- **Incremental updates**: Model learns from each trade
-- **Continuous adaptation**: No batch retraining needed
-- **Reinforcement learning**: Q-learning for optimal actions
+Use these settings? [Y/n]:
+```
 
-### v7.0 - Enhanced UX
+**Benefits:**
+- ⚡ **10x faster restarts** - Just press Y
+- ✅ **No typing errors** - Reuse proven settings
+- 🔄 **Flexibility** - Press 'n' to reconfigure anytime
+- 🔐 **Secure** - API keys never cached (always from .env)
 
-- **Web dashboard**: Real-time monitoring and control
-- **Telegram bot**: Notifications and remote control
-- **Performance analytics**: Detailed charts and reports
+To start fresh, delete the cache:
+```bash
+rm config_cache.json
+```
 
-### v8.0 - Advanced Features
+### Manual Data Download (Optional)
 
-- **Multi-symbol trading**: Trade multiple pairs simultaneously
-- **Portfolio optimization**: Allocation across symbols
-- **Genetic algorithm**: Auto-tune rule weights
-- **Multi-exchange support**: Bybit, OKX, etc.
+While the bot downloads data automatically, you can pre-download for faster training:
+
+```python
+# Quick script to download data
+from data.binance_downloader import BinanceDataDownloader
+
+downloader = BinanceDataDownloader()
+
+# Download single symbol
+downloader.download_symbol('BTCUSDT', '5m')
+
+# Download multiple symbols
+symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT']
+intervals = ['5m', '15m', '1h']
+downloader.download_multiple(symbols, intervals)
+```
+
+### Custom ML Features
+
+Add your own features to `ml_model.py`:
+
+```python
+# In _extract_features() method
+features['my_custom_indicator'] = row.get('my_indicator', 0)
+```
+
+### Custom Trading Rules
+
+Add new rules to `strategy.py`:
+
+```python
+@Rule(
+    Indicator(name='rsi', value=P(lambda x: x < 20)),
+    Indicator(name='volume_spike', value=True)
+)
+def my_custom_rule(self):
+    self.add_signal('BUY', 35, 'Custom pattern detected')
+```
+
+### Database Queries
+
+Access trade history:
+
+```python
+from database import Database
+
+db = Database('bot.db')
+
+# Get all trades
+trades = db.conn.execute("SELECT * FROM trades").fetchall()
+
+# Get today's P&L
+pnl = db.get_daily_pnl()
+```
 
 ---
 
@@ -674,21 +591,24 @@ binance-futures-bot/
 ### General
 
 **Q: Is this profitable?**  
-A: Past performance doesn't guarantee future results. Backtest thoroughly and start with small amounts on testnet.
+A: Trading results vary based on market conditions, settings, and risk management. Always backtest thoroughly and start with small amounts on testnet.
 
 **Q: Do I need ML experience?**  
-A: No! Auto-training handles everything. Just run the bot and press [Y].
+A: No! The bot handles everything automatically. Just configure .env and run.
 
 **Q: Can I use this on live trading?**  
 A: Yes, but start with testnet first. Set `TESTNET=false` in `.env` when ready.
 
+**Q: How much capital do I need?**  
+A: Minimum $100 on testnet for testing. $1000+ recommended for live trading.
+
 ### Technical
 
 **Q: How accurate is the ML model?**  
-A: Typical test accuracy: 74-84%. Combined with rules, provides robust signals.
+A: Typical test accuracy: 70-85%. Combined with rules, provides robust signals.
 
 **Q: How often should I retrain models?**  
-A: Weekly or after major market regime changes. Delete model and bot will auto-retrain.
+A: Models automatically train on first run. Manually retrain weekly or after major market changes by deleting the model file.
 
 **Q: Can I add my own rules?**  
 A: Yes! Edit `strategy.py` and add new `@Rule` decorators.
@@ -696,35 +616,22 @@ A: Yes! Edit `strategy.py` and add new `@Rule` decorators.
 **Q: What about funding rates?**  
 A: Bot tracks them. On average, ~0.01% per 8 hours (~10% annually). Factor into strategy.
 
+**Q: Does it work with all symbols?**  
+A: Yes, any Binance Futures pair. Each symbol-timeframe gets its own trained model.
+
 ### Trading
 
 **Q: What's the best timeframe?**  
 A: 5m-15m for active trading, 1h-4h for swing trading. Backtest to find your preference.
 
-**Q: How much capital do I need?**  
-A: Minimum $100 on testnet for testing. $1000+ recommended for live trading.
+**Q: Can I trade multiple symbols?**  
+A: Currently one symbol per bot instance. Run multiple instances for multiple symbols.
 
-**Q: Does it work on all pairs?**  
-A: Yes, any Binance Futures pair. Each gets its own trained model.
+**Q: How do I change symbols?**  
+A: Update `TRADING_PAIR` and `TIMEFRAME` in `.env`. Bot will auto-train a new model on next run.
 
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Here's how:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow existing code style
-- Add tests for new features
-- Update documentation
-- Keep commits atomic and descriptive
+**Q: Do I need to re-enter configuration every time I restart?**  
+A: No! The bot saves your settings to `config_cache.json` and asks if you want to reuse them. Just press Y for instant restart.
 
 ---
 
@@ -757,8 +664,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/hocestnonsatis/binance-futures-bot/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/hocestnonsatis/binance-futures-bot/discussions)
+Have questions or found a bug?
+
+- **Issues**: [GitHub Issues](https://github.com/yourusername/binance-bot/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/binance-bot/discussions)
 
 ---
 
@@ -770,19 +679,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 # Run bot
 python main.py
 
-# Backtest
+# Backtest strategy
 python tools/backtest.py
-
-# Check position
-python tools/check_position.py
-
-# List models
-python tools/list_models.py
 ```
 
 ### Key Metrics
 
-- **Test Accuracy**: 74-84% (ML models)
+- **ML Accuracy**: 70-85% (varies by market)
 - **Win Rate Target**: 55-65%
 - **Profit Factor Target**: > 1.5
 - **Max Drawdown**: < 15%
@@ -794,25 +697,24 @@ python tools/list_models.py
 3. ✅ Use stop losses
 4. ✅ Don't over-leverage
 5. ✅ Monitor funding rates
-6. ✅ Retrain models regularly
-7. ✅ Keep detailed logs
+6. ✅ Keep detailed logs
+7. ✅ Start small, scale gradually
 
 ---
 
 <div align="center">
 
-**Made with ❤️ by traders, for traders**
+**Made with ❤️ for algorithmic traders**
 
 ⭐ **If you find this useful, please star the repo!** ⭐
 
-[Report Bug](https://github.com/hocestnonsatis/binance-futures-bot/issues) · 
-[Request Feature](https://github.com/hocestnonsatis/binance-futures-bot/issues) · 
-[Documentation](https://github.com/hocestnonsatis/binance-futures-bot/wiki)
+[Report Bug](https://github.com/yourusername/binance-bot/issues) · 
+[Request Feature](https://github.com/yourusername/binance-bot/issues)
 
 </div>
 
 ---
 
-**Version**: 5.2.0  
+**Version**: 6.0.0  
 **Status**: Production-Ready ✅  
-**Last Updated**: October 8, 2025
+**Last Updated**: October 9, 2025

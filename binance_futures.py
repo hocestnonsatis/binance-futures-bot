@@ -424,4 +424,101 @@ class BinanceFutures:
         # Close position with market order
         close_side = 'SELL' if position['side'] == 'LONG' else 'BUY'
         return self.place_market_order(symbol, close_side, position['quantity'])
+    
+    # === TRADE HISTORY ===
+    
+    def get_account_trades(self, symbol: str = None, limit: int = 500, 
+                          start_time: int = None, end_time: int = None) -> List[Dict]:
+        """
+        Get account trade history
+        
+        Args:
+            symbol: Trading pair (optional, get all if None)
+            limit: Max trades to return (default 500, max 1000)
+            start_time: Start timestamp in ms (optional)
+            end_time: End timestamp in ms (optional)
+        
+        Returns:
+            List of trade records with P&L information
+        """
+        try:
+            params = {'limit': min(limit, 1000)}
+            
+            if symbol:
+                params['symbol'] = symbol
+            if start_time:
+                params['startTime'] = start_time
+            if end_time:
+                params['endTime'] = end_time
+            
+            trades = self.client.futures_account_trades(**params)
+            
+            results = []
+            for trade in trades:
+                results.append({
+                    'symbol': trade['symbol'],
+                    'id': trade['id'],
+                    'order_id': trade['orderId'],
+                    'side': trade['side'],  # BUY or SELL
+                    'price': float(trade['price']),
+                    'quantity': float(trade['qty']),
+                    'quote_qty': float(trade['quoteQty']),
+                    'commission': float(trade['commission']),
+                    'commission_asset': trade['commissionAsset'],
+                    'time': int(trade['time']),
+                    'position_side': trade['positionSide'],
+                    'realized_pnl': float(trade['realizedPnl']),
+                    'is_maker': trade['maker']
+                })
+            
+            return results
+        except BinanceAPIException as e:
+            raise Exception(f"Failed to get account trades: {e}")
+    
+    def get_income_history(self, symbol: str = None, income_type: str = None,
+                          limit: int = 100, start_time: int = None, 
+                          end_time: int = None) -> List[Dict]:
+        """
+        Get account income history (P&L, funding fees, commissions, etc.)
+        
+        Args:
+            symbol: Trading pair (optional)
+            income_type: Type of income (REALIZED_PNL, FUNDING_FEE, COMMISSION, etc.)
+            limit: Max records to return (default 100, max 1000)
+            start_time: Start timestamp in ms (optional)
+            end_time: End timestamp in ms (optional)
+        
+        Returns:
+            List of income records
+        """
+        try:
+            params = {'limit': min(limit, 1000)}
+            
+            if symbol:
+                params['symbol'] = symbol
+            if income_type:
+                params['incomeType'] = income_type
+            if start_time:
+                params['startTime'] = start_time
+            if end_time:
+                params['endTime'] = end_time
+            
+            incomes = self.client.futures_income_history(**params)
+            
+            results = []
+            for income in incomes:
+                results.append({
+                    'symbol': income['symbol'],
+                    'income_type': income['incomeType'],
+                    'income': float(income['income']),
+                    'asset': income['asset'],
+                    'info': income.get('info', ''),
+                    'time': int(income['time']),
+                    'tran_id': income['tranId'],
+                    'trade_id': income.get('tradeId', '')
+                })
+            
+            return results
+        except BinanceAPIException as e:
+            raise Exception(f"Failed to get income history: {e}")
 

@@ -4,8 +4,10 @@ Simple, clean configuration with CLI input and .env support
 """
 
 import os
+import json
 from dotenv import load_dotenv
-from typing import Dict
+from typing import Dict, Optional
+from datetime import datetime
 
 # ANSI Colors for terminal
 class Colors:
@@ -20,6 +22,8 @@ class Colors:
 class Config:
     """Trading bot configuration"""
     
+    CONFIG_CACHE_FILE = 'config_cache.json'
+    
     def __init__(self):
         load_dotenv()
         
@@ -31,19 +35,37 @@ class Config:
         # Trading Configuration (from CLI)
         self.trading_pair = ''
         self.timeframe = '5m'
-        self.leverage = 10
+        self.leverage = 20  # Increased from 10 for higher returns
         self.margin_type = 'ISOLATED'
+        
+        # Multi-Timeframe Configuration
+        self.use_multi_timeframe = True  # Enable multi-timeframe analysis
+        self.higher_timeframe = None  # Auto-calculated based on primary timeframe
+        self.htf_multiplier = 12  # Higher TF is 12x primary (5m -> 1h, 15m -> 3h)
         
         # Order Configuration
         self.order_type = 'limit'  # 'market' or 'limit'
         self.limit_offset_pct = 0.05  # % offset for limit orders (0% maker fee!)
         self.limit_timeout = 30  # Seconds to wait for limit order fill
         
+        # Limit order retry configuration (smart retry system)
+        self.limit_retry_attempts = 5        # Number of retry attempts with price updates
+        self.limit_retry_interval = 45       # Seconds between retries
+        self.limit_skip_on_failure = True    # Skip trade if not filled (avoid taker fee)
+        
         # Risk Management
         self.max_position_pct = 10.0  # % of balance
-        self.stop_loss_pct = 2.0
-        self.take_profit_pct = 3.0
+        self.stop_loss_pct = 1.2  # Tightened from 2.0 based on performance analysis
+        self.take_profit_pct = 1.5  # Reduced from 3.0 - tighter target with 20x leverage
         self.max_daily_loss_pct = 5.0
+        self.trailing_stop_pct = 0.8  # More aggressive trailing (from 1.0)
+        self.trailing_activation_pct = 0.5  # Activate after 0.5% profit
+        
+        # Direction-based confidence thresholds (from performance analysis)
+        # LONG positions were losing (-0.17 USDT), SHORT winning (+1.15 USDT)
+        self.min_confidence_long = 65.0   # Higher bar for LONG (worse performance)
+        self.min_confidence_short = 55.0  # Lower bar for SHORT (better performance)
+        self.min_confidence_default = 60.0  # Fallback for other signals
         
         # Indicator Settings
         self.rsi_period = 14
@@ -52,9 +74,131 @@ class Config:
         self.ema_fast = 9
         self.ema_slow = 21
         self.volume_threshold = 1.5
+        
+        # ML Model Configuration
+        self.ml_model_type = 'ensemble'  # 'ensemble', 'pytorch_lstm', 'pytorch_transformer'
+        self.use_pytorch = False  # Enable PyTorch models (requires GPU for best performance)
+    
+    def calculate_higher_timeframe(self) -> str:
+        """
+        Calculate higher timeframe based on primary timeframe
+        
+        Returns:
+            Higher timeframe string (e.g., '1h' for '5m')
+        """
+        # Timeframe to minutes mapping
+        tf_to_minutes = {
+            '1m': 1, '3m': 3, '5m': 5, '15m': 15, '30m': 30,
+            '1h': 60, '2h': 120, '4h': 240, '6h': 360, '12h': 720,
+            '1d': 1440, '3d': 4320, '1w': 10080
+        }
+        
+        minutes_to_tf = {v: k for k, v in tf_to_minutes.items()}
+        
+        # Get primary timeframe in minutes
+        primary_minutes = tf_to_minutes.get(self.timeframe, 5)
+        
+        # Calculate higher timeframe (12x multiplier by default)
+        higher_minutes = primary_minutes * self.htf_multiplier
+        
+        # Find closest available timeframe
+        available_minutes = sorted(tf_to_minutes.values())
+        
+        # Find the closest higher or equal timeframe
+        for mins in available_minutes:
+            if mins >= higher_minutes:
+                return minutes_to_tf[mins]
+        
+        # If no higher timeframe, use weekly
+        return '1w'
+    
+    def save_config_cache(self):
+        """Save current configuration to cache file for quick restart"""
+        cache_data = {
+            'timestamp': datetime.now().isoformat(),
+            'trading_pair': self.trading_pair,
+            'timeframe': self.timeframe,
+            'leverage': self.leverage,
+            'margin_type': self.margin_type,
+            'max_position_pct': self.max_position_pct,
+            'stop_loss_pct': self.stop_loss_pct,
+            'take_profit_pct': self.take_profit_pct,
+            'order_type': self.order_type,
+            'testnet': self.testnet
+        }
+        
+        try:
+            with open(self.CONFIG_CACHE_FILE, 'w') as f:
+                json.dump(cache_data, f, indent=2)
+        except Exception as e:
+            # Silently fail - cache is optional
+            pass
+    
+    def load_config_cache(self) -> Optional[Dict]:
+        """Load cached configuration if exists"""
+        if not os.path.exists(self.CONFIG_CACHE_FILE):
+            return None
+        
+        try:
+            with open(self.CONFIG_CACHE_FILE, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            return None
+    
+    def apply_cached_config(self, cache_data: Dict):
+        """Apply cached configuration values"""
+        self.trading_pair = cache_data.get('trading_pair', 'BTCUSDT')
+        self.timeframe = cache_data.get('timeframe', '5m')
+        self.leverage = cache_data.get('leverage', 10)
+        self.margin_type = cache_data.get('margin_type', 'ISOLATED')
+        self.max_position_pct = cache_data.get('max_position_pct', 10.0)
+        self.stop_loss_pct = cache_data.get('stop_loss_pct', 2.0)
+        self.take_profit_pct = cache_data.get('take_profit_pct', 3.0)
+        self.order_type = cache_data.get('order_type', 'limit')
+        # Note: testnet is always from .env, not from cache (security)
     
     def get_from_user(self):
         """Get configuration from user via CLI"""
+        print(f"\n{Colors.BOLD}{Colors.CYAN}═══ FUTURES BOT CONFIGURATION ═══{Colors.END}\n")
+        
+        # Check for cached configuration
+        cached_config = self.load_config_cache()
+        if cached_config:
+            print(f"{Colors.GREEN}✓ Found saved configuration from previous session{Colors.END}")
+            print(f"{Colors.CYAN}  Last used: {cached_config.get('timestamp', 'Unknown')}{Colors.END}\n")
+            
+            # Display cached settings
+            print(f"{Colors.BOLD}Previous Settings:{Colors.END}")
+            print(f"  • Trading Pair: {cached_config.get('trading_pair')}")
+            print(f"  • Timeframe: {cached_config.get('timeframe')}")
+            print(f"  • Leverage: {cached_config.get('leverage')}x")
+            print(f"  • Position Size: {cached_config.get('max_position_pct')}%")
+            print(f"  • Stop Loss: {cached_config.get('stop_loss_pct')}%")
+            print(f"  • Take Profit: {cached_config.get('take_profit_pct')}%")
+            print(f"  • Order Type: {cached_config.get('order_type')}")
+            
+            # Ask if user wants to use cached config
+            use_cached = input(f"\n{Colors.CYAN}Use these settings? [Y/n]: {Colors.END}").strip().lower()
+            
+            if use_cached != 'n':
+                # Apply cached config
+                self.apply_cached_config(cached_config)
+                
+                # Display summary
+                self._display_summary()
+                
+                # Final confirmation
+                confirm = input(f"\n{Colors.CYAN}Start bot? [Y/n]: {Colors.END}").strip().lower()
+                if confirm == 'n':
+                    print(f"{Colors.YELLOW}Cancelled.{Colors.END}")
+                    return False
+                
+                # Save config again (updates timestamp)
+                self.save_config_cache()
+                return True
+            else:
+                print(f"{Colors.CYAN}OK, let's configure from scratch...{Colors.END}\n")
+        
         print(f"\n{Colors.BOLD}{Colors.CYAN}═══ FUTURES BOT CONFIGURATION ═══{Colors.END}\n")
         
         # Check API keys
@@ -123,6 +267,10 @@ class Config:
         if confirm == 'n':
             print(f"{Colors.YELLOW}Cancelled.{Colors.END}")
             return False
+        
+        # Save configuration for quick restart next time
+        self.save_config_cache()
+        print(f"{Colors.GREEN}✓ Configuration saved for next restart{Colors.END}")
         
         return True
     

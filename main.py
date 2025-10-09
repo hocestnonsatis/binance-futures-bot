@@ -92,6 +92,11 @@ class FuturesBot:
         self.risk_manager = RiskManager(self.config)
         print(f"{Colors.GREEN}✓ Risk manager initialized{Colors.END}")
         
+        # Calculate higher timeframe for multi-timeframe analysis
+        if self.config.use_multi_timeframe:
+            self.config.higher_timeframe = self.config.calculate_higher_timeframe()
+            print(f"{Colors.CYAN}✓ Multi-Timeframe Analysis: {self.config.timeframe} + {self.config.higher_timeframe}{Colors.END}")
+        
         # Initialize strategy (hybrid: expert system + ML enhancement)
         experta_strategy = Strategy(self.config)
         
@@ -108,34 +113,30 @@ class FuturesBot:
             # Model exists and loaded
             print(f"{Colors.CYAN}  🤖 ML Enhancement: Active{Colors.END}")
             if ml_info['symbol'] and ml_info['timeframe']:
-                print(f"{Colors.CYAN}     Model: {ml_info['symbol']} {ml_info['timeframe']}{Colors.END}")
+                if ml_info.get('is_alternative'):
+                    print(f"{Colors.CYAN}     Model: {ml_info['actual_model_symbol']} {ml_info['timeframe']} (similar to {ml_info['symbol']}){Colors.END}")
+                else:
+                    print(f"{Colors.CYAN}     Model: {ml_info['symbol']} {ml_info['timeframe']}{Colors.END}")
         else:
-            # No model - offer auto-training
+            # No model - automatically download data and train
             print(f"{Colors.YELLOW}  🤖 ML Enhancement: Not trained{Colors.END}")
             if ml_info['symbol'] and ml_info['timeframe']:
                 print(f"{Colors.CYAN}     No model for: {ml_info['symbol']} {ml_info['timeframe']}{Colors.END}")
             
-            # Ask user if they want auto-training
-            print(f"\n{Colors.BOLD}Would you like to train an ML model now?{Colors.END}")
-            print(f"{Colors.CYAN}This will fetch 1000 candles from Binance and train a model (~30-60 seconds){Colors.END}")
+            # Automatically train model (no user confirmation needed)
+            print(f"\n{Colors.CYAN}📥 Auto-training ML model...{Colors.END}")
+            print(f"{Colors.CYAN}   Will check cached data or download from Binance (~30-120 seconds){Colors.END}")
+            print()
             
-            response = input(f"{Colors.YELLOW}Auto-train ML model? [Y/n]: {Colors.END}").strip().lower()
+            success = self.strategy.ml_enhancer.auto_train(self.binance, limit=2000)
             
-            if response != 'n':
-                # Auto-train model
-                print()
-                success = self.strategy.ml_enhancer.auto_train(self.binance, limit=1000)
-                
-                if success:
-                    print(f"{Colors.GREEN}✓ ML model trained successfully!{Colors.END}")
-                    print(f"{Colors.CYAN}  🤖 ML Enhancement: Now Active{Colors.END}")
-                    self.db.info(f"ML model auto-trained: {ml_info['symbol']} {ml_info['timeframe']}")
-                else:
-                    print(f"{Colors.YELLOW}⚠ Auto-training failed - continuing with rules only{Colors.END}")
-                    print(f"{Colors.CYAN}  You can train manually later: python tools/train_ml_model.py{Colors.END}")
+            if success:
+                print(f"{Colors.GREEN}✓ ML model trained successfully!{Colors.END}")
+                print(f"{Colors.CYAN}  🤖 ML Enhancement: Now Active{Colors.END}")
+                self.db.info(f"ML model auto-trained: {ml_info['symbol']} {ml_info['timeframe']}")
             else:
-                print(f"{Colors.CYAN}  Continuing with rules-only strategy{Colors.END}")
-                print(f"{Colors.CYAN}  Train later with: python tools/train_ml_model.py{Colors.END}")
+                print(f"{Colors.YELLOW}⚠ Auto-training failed - continuing with rules only{Colors.END}")
+                print(f"{Colors.CYAN}  Bot will still work using Experta rules (70% of strategy){Colors.END}")
         
         self.db.info(f"Strategy initialized: {strategy_name}")
         
@@ -158,15 +159,38 @@ class FuturesBot:
                 loop_count += 1
                 current_time = datetime.now().strftime("%H:%M:%S")
                 
-                # Get market data
+                # Get market data (primary timeframe)
                 df = self.binance.get_klines(
                     self.config.trading_pair,
                     self.config.timeframe,
                     limit=200
                 )
                 
-                # Calculate indicators
+                # Calculate indicators for primary timeframe
                 df = TechnicalIndicators.add_all_indicators(df)
+                
+                # Add higher timeframe indicators if enabled
+                if self.config.use_multi_timeframe and self.config.higher_timeframe:
+                    try:
+                        # Fetch higher timeframe data
+                        df_htf = self.binance.get_klines(
+                            self.config.trading_pair,
+                            self.config.higher_timeframe,
+                            limit=200
+                        )
+                        
+                        # Calculate indicators for higher timeframe
+                        df_htf = TechnicalIndicators.add_all_indicators(df_htf)
+                        
+                        # Merge higher timeframe indicators into primary
+                        htf_suffix = f"htf_{self.config.higher_timeframe}"
+                        df = TechnicalIndicators.add_higher_timeframe_indicators(
+                            df, df_htf, htf_suffix
+                        )
+                    except Exception as e:
+                        # If HTF fetch fails, continue with primary TF only
+                        if loop_count % 10 == 0:
+                            print(f"{Colors.YELLOW}⚠ HTF data fetch failed: {e}{Colors.END}")
                 
                 # Get current price
                 current_price = df.iloc[-1]['close']
@@ -212,6 +236,20 @@ class FuturesBot:
         signal = self.strategy.analyze(df)
         self.signals_processed += 1
         
+        # Apply direction-specific confidence threshold
+        if signal['signal'] == 'BUY':
+            min_conf = self.config.min_confidence_long
+        elif signal['signal'] == 'SELL':
+            min_conf = self.config.min_confidence_short
+        else:
+            min_conf = self.config.min_confidence_default
+        
+        # Check confidence threshold
+        if signal['signal'] in ['BUY', 'SELL'] and signal['confidence'] < min_conf:
+            if self.signals_processed % 20 == 0:
+                print(f"{Colors.YELLOW}[{current_time}] {signal['signal']} signal {signal['confidence']:.0f}% below threshold {min_conf:.0f}%{Colors.END}")
+            return
+        
         # Log signal
         signal_msg = f"Signal: {signal['signal']} ({signal['confidence']:.0f}%)"
         print(f"{Colors.CYAN}[{current_time}] {signal_msg}{Colors.END}")
@@ -225,8 +263,63 @@ class FuturesBot:
         if signal['signal'] in ['BUY', 'SELL']:
             self._execute_entry(signal, current_price, balance, current_time)
     
+    def _execute_entry_with_smart_limit(self, side, quantity):
+        """
+        Smart limit order with retries and price updates
+        Returns order dict if successful, None if all attempts failed
+        """
+        max_attempts = self.config.limit_retry_attempts
+        retry_interval = self.config.limit_retry_interval
+        
+        for attempt in range(1, max_attempts + 1):
+            try:
+                # Get fresh current price for each attempt
+                fresh_price = self.binance.get_current_price(self.config.trading_pair)
+                
+                # Calculate limit price with offset
+                if side == 'BUY':
+                    limit_price = fresh_price * (1 - self.config.limit_offset_pct / 100)
+                else:  # SELL
+                    limit_price = fresh_price * (1 + self.config.limit_offset_pct / 100)
+                
+                print(f"{Colors.CYAN}Attempt {attempt}/{max_attempts}: Limit @ {limit_price:.2f} (fresh price: {fresh_price:.2f}){Colors.END}")
+                
+                # Cancel previous order if exists
+                if attempt > 1:
+                    self.binance.cancel_all_orders(self.config.trading_pair)
+                    time.sleep(0.5)  # Small delay after cancel
+                
+                # Place new limit order
+                order = self.binance.place_limit_order(
+                    self.config.trading_pair, side, quantity, limit_price
+                )
+                
+                # Wait for fill
+                filled = self._wait_for_order_fill(order['order_id'], retry_interval)
+                
+                if filled:
+                    print(f"{Colors.GREEN}✓ Limit order filled at {limit_price:.2f}{Colors.END}")
+                    return order  # Success!
+                
+                print(f"{Colors.YELLOW}Not filled, retrying with updated price...{Colors.END}")
+                
+            except Exception as e:
+                print(f"{Colors.RED}Error on attempt {attempt}: {e}{Colors.END}")
+                if attempt < max_attempts:
+                    time.sleep(2)  # Brief pause before retry
+        
+        # All attempts failed
+        if self.config.limit_skip_on_failure:
+            print(f"{Colors.YELLOW}⚠ Failed after {max_attempts} attempts - skipping trade to avoid taker fee{Colors.END}")
+            self.binance.cancel_all_orders(self.config.trading_pair)
+            return None
+        else:
+            # Fallback to market order (not recommended - high fees)
+            print(f"{Colors.YELLOW}⚠ Using market order as fallback{Colors.END}")
+            return self.binance.place_market_order(self.config.trading_pair, side, quantity)
+    
     def _execute_entry(self, signal, current_price, balance, current_time):
-        """Execute entry trade with limit or market order"""
+        """Execute entry trade with smart limit order retry"""
         try:
             # Calculate position size
             quantity = self.risk_manager.calculate_position_size(balance, current_price)
@@ -243,36 +336,14 @@ class FuturesBot:
             
             # Place order based on config
             if self.config.order_type == 'limit':
-                # Calculate limit price (slightly better than market)
-                if side == 'BUY':
-                    limit_price = current_price * (1 - self.config.limit_offset_pct / 100)
-                else:  # SELL
-                    limit_price = current_price * (1 + self.config.limit_offset_pct / 100)
+                # Use smart limit order retry system
+                order = self._execute_entry_with_smart_limit(side, quantity)
                 
-                print(f"{Colors.CYAN}Placing limit order @ {limit_price:.2f} (0% maker fee!){Colors.END}")
-                
-                # Place limit order
-                order = self.binance.place_limit_order(
-                    self.config.trading_pair,
-                    side,
-                    quantity,
-                    limit_price
-                )
-                
-                # Wait for fill
-                print(f"{Colors.CYAN}Waiting for fill (max {self.config.limit_timeout}s)...{Colors.END}")
-                filled = self._wait_for_order_fill(order['order_id'], self.config.limit_timeout)
-                
-                if not filled:
-                    # Cancel and use market order as fallback
-                    print(f"{Colors.YELLOW}⚠ Limit not filled, using market order{Colors.END}")
-                    self.binance.cancel_all_orders(self.config.trading_pair)
-                    
-                    order = self.binance.place_market_order(
-                        self.config.trading_pair,
-                        side,
-                        quantity
-                    )
+                if order is None:
+                    # Trade skipped after all retries
+                    print(f"{Colors.YELLOW}Trade skipped - limit order not filled{Colors.END}")
+                    self.db.info(f"Skipped {side} trade - limit order timeout after {self.config.limit_retry_attempts} attempts")
+                    return
             else:
                 # Market order (fast but 0.04% taker fee)
                 print(f"{Colors.CYAN}Placing market order (0.04% taker fee){Colors.END}")
